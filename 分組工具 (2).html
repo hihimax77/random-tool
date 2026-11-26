@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>分組工具</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+:root{color-scheme:dark;--ink:#eef1ff;--muted:#a9b2d6;--line:rgba(255,255,255,.16);--glass:rgba(14,18,50,.58);--field:rgba(255,255,255,.08);--gold:#ffd166;
+--m:#9fd4ff;--m-bg:rgba(124,196,255,.18);--m-line:#7cc4ff;--f:#ffb3d6;--f-bg:rgba(255,142,200,.18);--f-line:#ff8ec8;
+--ok:#8ff0b8;--ok-bg:rgba(60,200,130,.18);--bad:#ffb199;--bad-bg:rgba(255,110,70,.2);
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.3) transparent}
+body{margin:0;min-height:100vh;color:var(--ink);font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;line-height:1.5;font-size:15px;
+background:radial-gradient(ellipse at 15% 0%,#2b1d63 0,transparent 55%),radial-gradient(ellipse at 90% 100%,#0e3b63 0,transparent 55%),#070a1c;background-attachment:fixed}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:14px 16px 20px}
+.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+h1{font-size:1.6rem;margin:0;letter-spacing:.08em;background:linear-gradient(90deg,#ffe29a,#ffb3d6 55%,#9fd4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin:0;font-size:.9rem}
+h2{font-size:1.05rem;margin:0}
+.layout{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.card{background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 36px rgba(0,0,0,.4)}
+@media (min-width:900px){
+  html,body{height:100%;overflow:hidden}
+  .wrap{height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;padding-bottom:14px}
+  .layout{flex:1;min-height:0;grid-template-columns:minmax(0,4fr) minmax(0,5fr) minmax(0,5fr);grid-template-rows:minmax(0,1fr)}
+  .card{display:flex;flex-direction:column;min-height:0}
+  .plist{max-height:none;flex:1;min-height:0}
+  .gscroll,.results{flex:1;min-height:0;overflow:auto}
+}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+label.f{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:.9rem}
+input[type=number],input[type=text],textarea{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:4px 8px;min-width:0}
+input[type=number]{width:76px;text-align:center}
+input:focus-visible,button:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ink);padding:5px 12px;transition:background .15s}
+button:hover{background:rgba(255,255,255,.16)}
+button.primary{background:linear-gradient(135deg,#ffd166,#ff9a62);color:#2a1500;border-color:transparent;font-weight:700;padding:8px 22px;box-shadow:0 4px 16px rgba(255,170,90,.35)}
+button.primary:hover{filter:brightness(1.08)}
+.plist{max-height:340px;overflow:auto;border-top:1px solid var(--line);padding-top:6px;margin-top:6px}
+.prow{display:grid;grid-template-columns:26px minmax(0,1fr) auto auto;gap:6px;align-items:center;padding:2px 0}
+.no{color:var(--muted);text-align:right;font-size:.8rem}
+.seg{display:inline-flex}
+.seg button{border-radius:0;padding:3px 10px;color:var(--muted)}
+.seg button:first-child{border-radius:8px 0 0 8px}
+.seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.seg button.on.m{background:var(--m-bg);color:var(--m);border-color:var(--m-line);font-weight:700}
+.seg button.on.f{background:var(--f-bg);color:var(--f);border-color:var(--f-line);font-weight:700}
+.del{padding:2px 8px;color:var(--muted);line-height:1.3}
+.del:hover{color:var(--bad);border-color:var(--bad)}
+.del:disabled{opacity:.35;cursor:not-allowed}
+.del:disabled:hover{color:var(--muted);border-color:var(--line)}
+.range{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--muted);font-size:.9rem;margin-top:6px}
+.range input{width:58px}
+.range .m{color:var(--m);border-color:var(--m-line)}
+.range .f{color:var(--f);border-color:var(--f-line)}
+details{margin-top:8px}
+summary{cursor:pointer;color:var(--muted);font-size:.9rem}
+textarea{width:100%;min-height:70px;margin:6px 0}
+.ghead,.grow{display:grid;grid-template-columns:54px repeat(3,minmax(0,1fr)) 30px;gap:6px;align-items:center}
+.ghead{color:var(--muted);font-size:.85rem;text-align:center;margin-bottom:2px}
+.grow{padding:2px 0}
+.grow b{font-weight:500}
+.grow input{width:100%}
+.ghead .m,.grow .mm{color:var(--m)}
+.ghead .f,.grow .ff{color:var(--f)}
+.rules{border-top:1px solid var(--line);margin-top:10px;padding-top:8px}
+.rules h3{margin:0 0 2px;font-size:.95rem}
+.rule{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:2px 0;color:var(--muted);font-size:.9rem}
+.rule input{width:64px}
+.addrule{margin-top:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0}
+.chip{padding:1px 10px;border-radius:999px;font-size:.82rem;background:var(--ok-bg);color:var(--ok)}
+.chip.bad{background:var(--bad-bg);color:var(--bad)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.err{color:var(--bad);background:var(--bad-bg);border-radius:8px;padding:6px 10px;margin-top:8px;display:none;font-size:.88rem}
+.err.show{display:block}
+.results{margin-top:4px;display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));align-content:start}
+.gcard{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.05)}
+.gcard h3{margin:0 0 6px;font-size:.95rem;display:flex;justify-content:space-between;gap:6px;align-items:baseline;color:var(--gold)}
+.gcard h3 small{color:var(--muted);font-weight:400;font-size:.75rem}
+.gcard ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.gcard li{padding:2px 8px;border-radius:6px;border-left:4px solid}
+.gcard li.m{background:var(--m-bg);color:#d3ebff;border-color:var(--m-line)}
+.gcard li.f{background:var(--f-bg);color:#ffd9ec;border-color:var(--f-line)}
+.empty{color:var(--muted);margin:8px 0 0;font-size:.92rem}
+[hidden]{display:none!important}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tabs{display:flex;gap:4px;padding:3px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--line)}
+.tabs button{border:0;background:transparent;border-radius:999px;padding:5px 20px;font-size:1.1rem;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.tabs button[aria-selected=true]{background:linear-gradient(135deg,#ffd166,#ff9a62);color:#2a1500;box-shadow:0 3px 14px rgba(255,170,90,.35)}
+select{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:4px 8px}
+select option{color:#111}
+.dctl{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:center;margin-bottom:4px}
+.chk{cursor:pointer}
+.dres{display:flex;flex-wrap:wrap;gap:12px;align-content:flex-start;padding:18px 0;min-height:120px}
+.dchip{font-size:1.7rem;font-weight:700;padding:10px 24px;border-radius:14px;border:2px solid var(--line)}
+.dchip.roll{opacity:.6;background:rgba(255,255,255,.08)}
+.dchip.m{background:var(--m-bg);color:#d3ebff;border-color:var(--m-line)}
+.dchip.f{background:var(--f-bg);color:#ffd9ec;border-color:var(--f-line)}
+.dchip.fin{box-shadow:0 0 24px rgba(255,209,102,.45);animation:pop .35s ease-out}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.dchip.fin{animation:none}}
+.dh{margin:6px 0 4px;font-size:.95rem;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+.dhist{max-height:220px;overflow:auto}
+.drow{padding:3px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+@media (min-width:900px){
+  .layout.draw{grid-template-columns:minmax(0,4fr) minmax(0,10fr)}
+  .dhist{flex:1;min-height:0;max-height:none}
+}
+#fx{position:fixed;inset:0;z-index:5;pointer-events:none}
+.dtitle{font-size:1.25rem;font-weight:700;min-height:1.8em;margin-top:10px;color:var(--gold)}
+.dres{padding:8px 0 14px;min-height:100px}
+.dchip{font-size:2rem;min-width:120px;text-align:center;padding:10px 24px}
+.dchip.roll{filter:blur(.6px);border-style:dashed}
+.dchip.fin::before{content:attr(data-e);margin-right:8px}
+#beams{position:fixed;left:50%;top:50%;width:140vmax;height:140vmax;margin:-70vmax 0 0 -70vmax;z-index:0;pointer-events:none;opacity:0;transition:opacity .6s;
+background:repeating-conic-gradient(from 0deg,rgba(255,220,150,.2) 0 6deg,transparent 6deg 20deg);animation:spinb 9s linear infinite;
+-webkit-mask-image:radial-gradient(circle,#000 0,transparent 60%);mask-image:radial-gradient(circle,#000 0,transparent 60%)}
+body.spinning #beams{opacity:1}
+@keyframes spinb{to{transform:rotate(360deg)}}
+#cd{position:fixed;inset:0;display:grid;place-items:center;z-index:6;pointer-events:none;font-size:34vmin;font-weight:900;color:#fff;text-shadow:0 0 30px #ffd166,0 0 80px #ff8ec8}
+#cd.tick{animation:cdpop .7s ease-out}
+@keyframes cdpop{0%{transform:scale(2.4);opacity:0}25%{transform:scale(1);opacity:1}100%{transform:scale(.8);opacity:0}}
+#flash{position:fixed;inset:0;z-index:6;pointer-events:none;background:#fff;opacity:0}
+#flash.go{animation:flash .7s ease-out}
+@keyframes flash{0%{opacity:.85}100%{opacity:0}}
+.shake{animation:shake .5s}
+@keyframes shake{10%,50%,90%{transform:translate(-5px,2px)}30%,70%{transform:translate(5px,-2px)}}
+.dchip.roll{animation:wob .12s infinite alternate}
+@keyframes wob{from{transform:translateY(-4px) rotate(-1deg)}to{transform:translateY(4px) rotate(1deg)}}
+.dchip.fin{background-image:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.5) 50%,transparent 70%);background-size:250% 100%;
+animation:pop .5s cubic-bezier(.2,1.6,.4,1),shine 1.4s .4s 2,glow 1.2s ease-in-out infinite alternate}
+@keyframes shine{from{background-position:150% 0}to{background-position:-50% 0}}
+@keyframes glow{from{box-shadow:0 0 14px rgba(255,209,102,.4)}to{box-shadow:0 0 36px rgba(255,209,102,.95)}}
+@media (prefers-reduced-motion:reduce){.dchip.fin,.dchip.roll,.shake{animation:none}#beams{display:none}}
+.fcard{perspective:700px;width:130px;height:84px}
+.fcard .fi{position:relative;width:100%;height:100%;transition:transform .7s;transform-style:preserve-3d}
+.fcard.on .fi{transform:rotateY(180deg)}
+.fcard.shuf{animation:wob .1s infinite alternate}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;display:grid;place-items:center;border-radius:12px;border:2px solid var(--line);font-weight:700;font-size:1.3rem}
+.face.back{background:linear-gradient(135deg,#3a2a7a,#1d3d73);font-size:2rem}
+.face.front{transform:rotateY(180deg);background:#2a2150}
+.face.front.m{background:var(--m-bg);color:#d3ebff;border-color:var(--m-line)}
+.face.front.f{background:var(--f-bg);color:#ffd9ec;border-color:var(--f-line)}
+.egg{font-size:3.4rem;line-height:1.2;display:inline-block;animation:jig .35s infinite}
+@keyframes jig{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg) translateY(-6px)}}
+.wheelwrap{position:relative;width:320px;margin:0 auto}
+.wheel{display:block;border-radius:50%;box-shadow:0 0 40px rgba(255,209,102,.4)}
+.wptr{position:absolute;left:50%;top:-16px;transform:translateX(-50%);font-size:2rem;color:var(--gold);z-index:2;text-shadow:0 0 10px #000}
+.wout{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px;flex-basis:100%}
+@media (prefers-reduced-motion:reduce){.egg,.fcard.shuf{animation:none}}
+.dmain{display:block}
+@media (min-width:900px){
+  .dmain{display:flex;flex-direction:column;flex:1;min-height:0}
+  .dright{display:flex;flex-direction:column;flex:1;min-height:0}
+}
+.wheelmode .dmain{display:flex;flex-direction:row;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.wheelmode .dleft{flex:0 0 340px;max-width:100%}
+.wheelmode .dright{flex:1 1 200px;min-width:0;display:flex;flex-direction:column}
+.wheelmode .dh{border-top:0;padding-top:0;margin-top:10px}
+@media (min-width:900px){.wheelmode .dmain{flex-wrap:nowrap;align-items:stretch}}
+.pre{opacity:0;transform:scale(.5)}
+.pop{animation:gpop .4s cubic-bezier(.2,1.6,.4,1)}
+@keyframes gpop{0%{opacity:0;transform:scale(.4)}100%{opacity:1;transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.pop{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div id="beams" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="cd" aria-hidden="true"></div>
+<div id="flash" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="top"><h1 class="vh">分組與抽籤工具</h1><nav class="tabs" role="tablist"><button type="button" role="tab" id="tGroup" aria-selected="true">分組工具</button><button type="button" role="tab" id="tDraw" aria-selected="false">抽籤工具</button></nav><p class="sub" id="subtitle"></p></header>
+  <div class="layout">
+    <section class="card" aria-labelledby="h-people">
+      <div class="head">
+        <h2 id="h-people">名單</h2>
+        <label class="f">總人數 <input type="number" id="nPeople" min="1" max="200" value="12" inputmode="numeric"></label>
+      </div>
+      <div id="pcount" class="sub" style="margin:0"></div>
+      <div class="range">
+        <span>批次設定：第</span><input type="number" id="rFrom" min="1" inputmode="numeric" aria-label="起始號碼">
+        <span>號到第</span><input type="number" id="rTo" min="1" inputmode="numeric" aria-label="結束號碼"><span>號</span>
+        <button type="button" class="m" id="rM">設為男生</button>
+        <button type="button" class="f" id="rF">設為女生</button>
+      </div>
+      <div class="plist" id="people"></div>
+    </section>
+
+    <section class="card" id="gCard" aria-labelledby="h-groups">
+      <div class="head">
+        <h2 id="h-groups">分組設定</h2>
+        <label class="f">組數 <input type="number" id="nGroups" min="1" max="30" value="3" inputmode="numeric"></label>
+      </div>
+      <div class="gscroll">
+      <div class="ghead"><span></span><span>人數</span><span class="m">男生</span><span class="f">女生</span><span></span></div>
+      <div id="groups"></div>
+      <div class="rules">
+        <h3>不能同組的限制</h3>
+        <div id="rules"></div>
+        <button type="button" class="addrule" id="addRule">＋ 新增限制</button>
+      </div>
+      </div>
+      <div class="chips" id="chips" aria-live="polite"></div>
+      <div class="actions">
+        <button type="button" id="auto">自動平均分配</button>
+        <button type="button" id="reset">重設全部</button>
+        <button type="button" class="primary" id="go">開始分組</button>
+        <button type="button" id="showNow">直接顯示</button>
+      </div>
+      <div class="err" id="err" role="alert"></div>
+    </section>
+
+  <section class="card" id="rCard" aria-labelledby="h-res">
+    <div class="head">
+      <h2 id="h-res">分組結果</h2>
+      <div class="actions" style="margin:0">
+        <button type="button" id="gSound" aria-pressed="true">🔊 音效</button>
+        <button type="button" id="again" hidden>重新抽籤</button>
+        <button type="button" id="copy" hidden>複製結果</button>
+      </div>
+    </div>
+    <p class="empty" id="empty">設定完成後按「開始分組」，結果會顯示在這裡。</p>
+    <div class="results" id="results"></div>
+  </section>
+
+  <section class="card" id="drawCard" aria-labelledby="h-draw" hidden>
+    <div class="head"><h2 id="h-draw">抽籤</h2><span class="sub" id="dRemain"></span></div>
+    <div class="dctl">
+      <label class="f">一次抽出 <input type="number" id="dCount" min="1" max="200" value="1" inputmode="numeric"> 人</label>
+      <label class="f">範圍 <select id="dGender"><option value="all">全部</option><option value="m">只抽男生</option><option value="f">只抽女生</option></select></label>
+      <label class="f">玩法 <select id="dStyle"><option value="slot">🎰 老虎機</option><option value="flip">🃏 翻牌</option><option value="egg">🧋 來杯好茶搖一搖</option><option value="wheel">🎡 轉盤</option></select></label>
+      <label class="f chk"><input type="checkbox" id="dNoRepeat" checked> 已抽過的不再抽</label>
+    </div>
+    <div class="actions"><button type="button" class="primary" id="dGo">抽籤</button><button type="button" id="dReset">重設已抽</button><button type="button" id="dSound" aria-pressed="true">🔊 音效</button></div>
+    <div class="err" id="dMsg" role="alert"></div>
+    <div class="dmain" id="dMain">
+      <div class="dleft">
+        <div class="dtitle" id="dTitle"></div>
+        <div class="dres" id="dResult" aria-live="polite"></div>
+      </div>
+      <div class="dright">
+        <h3 class="dh">抽籤紀錄</h3>
+        <div class="dhist" id="dHist"></div>
+      </div>
+    </div>
+  </section>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let people = [], groups = [], rules = [], result = null, custom = false;
+
+function clampInt(v, min, max){
+  v = parseInt(v, 10);
+  if (isNaN(v)) v = min;
+  return Math.max(min, Math.min(max, v));
+}
+function defName(i){ return (i + 1) + '號'; }
+function nameOf(i){ return (people[i].name || '').trim() || defName(i); }
+function countG(g){ return people.filter(p => p.g === g).length; }
+
+function setPeople(n){
+  while (people.length < n){
+    const i = people.length;
+    people.push({name: defName(i), g: i % 2 ? 'f' : 'm'});
+  }
+  people.length = n;
+}
+function setGroups(n){
+  while (groups.length < n) groups.push({size:0, m:0, f:0});
+  groups.length = n;
+}
+
+function autoFill(){
+  custom = false;
+  const N = people.length, M = countG('m'), G = groups.length;
+  let cum = 0;
+  groups.forEach((g, i) => {
+    const size = Math.floor(N / G) + (i < N % G ? 1 : 0);
+    const a = Math.round(cum * M / N), b = Math.round((cum + size) * M / N);
+    g.size = size; g.m = b - a; g.f = size - g.m;
+    cum += size;
+  });
+}
+
+function renderPeople(){
+  const box = $('#people');
+  box.textContent = '';
+  people.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'prow';
+    const no = document.createElement('span');
+    no.className = 'no'; no.textContent = i + 1;
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = p.name; inp.dataset.i = i;
+    inp.setAttribute('aria-label', '第' + (i + 1) + '位姓名');
+    const seg = document.createElement('div');
+    seg.className = 'seg'; seg.setAttribute('role', 'group');
+    [['m','男'],['f','女']].forEach(([g, t]) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = t;
+      b.dataset.i = i; b.dataset.g = g;
+      b.className = g + (p.g === g ? ' on' : '');
+      b.setAttribute('aria-pressed', p.g === g);
+      seg.append(b);
+    });
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'del'; del.textContent = '✕';
+    del.dataset.del = i;
+    del.setAttribute('aria-label', '刪除第' + (i + 1) + '位');
+    row.append(no, inp, seg, del);
+    box.append(row);
+  });
+  updatePCount();
+}
+function updatePCount(){
+  $('#pcount').textContent = '男生 ' + countG('m') + ' 位，女生 ' + countG('f') + ' 位';
+}
+
+function renderGroups(){
+  const box = $('#groups');
+  box.textContent = '';
+  groups.forEach((g, i) => {
+    const row = document.createElement('div');
+    row.className = 'grow';
+    const lab = document.createElement('b');
+    lab.textContent = '第' + (i + 1) + '組';
+    row.append(lab);
+    [['size','人數',''],['m','男生','mm'],['f','女生','ff']].forEach(([k, t, c]) => {
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = 0; inp.max = 999; inp.inputMode = 'numeric';
+      inp.value = g[k]; inp.dataset.i = i; inp.dataset.k = k;
+      inp.setAttribute('aria-label', '第' + (i + 1) + '組' + t);
+      if (c) inp.className = c;
+      row.append(inp);
+    });
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'del'; del.textContent = '✕';
+    del.dataset.gdel = i; del.disabled = groups.length <= 1;
+    del.setAttribute('aria-label', '刪除第' + (i + 1) + '組');
+    row.append(del);
+    box.append(row);
+  });
+  updateStatus();
+}
+
+function sums(){
+  return {
+    size: groups.reduce((a, g) => a + g.size, 0),
+    m: groups.reduce((a, g) => a + g.m, 0),
+    f: groups.reduce((a, g) => a + g.f, 0)
+  };
+}
+function updateStatus(){
+  const s = sums(), N = people.length, M = countG('m'), F = countG('f');
+  const items = [['總人數', s.size, N], ['男生', s.m, M], ['女生', s.f, F]];
+  const box = $('#chips');
+  box.textContent = '';
+  items.forEach(([t, a, b]) => {
+    const c = document.createElement('span');
+    c.className = 'chip' + (a === b ? '' : ' bad');
+    c.textContent = t + '：已分配 ' + a + ' / 名單 ' + b;
+    box.append(c);
+  });
+}
+
+function shuffle(a){
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function generate(anim = true){
+  const err = $('#err');
+  const s = sums(), N = people.length, M = countG('m'), F = countG('f');
+  const msgs = [];
+  if (s.size !== N) msgs.push('各組人數合計 ' + s.size + ' 人，但名單有 ' + N + ' 人。');
+  if (s.m !== M) msgs.push('各組男生合計 ' + s.m + ' 人，但名單有 ' + M + ' 位男生。');
+  if (s.f !== F) msgs.push('各組女生合計 ' + s.f + ' 人，但名單有 ' + F + ' 位女生。');
+  const cons = [];
+  for (const r of rules){
+    if (r.a == null && r.b == null) continue;
+    if (r.a == null || r.b == null || r.a === r.b || r.a > N || r.b > N){
+      msgs.push('不能同組的限制有誤：兩個號碼都要填寫、不能相同，且要在 1 到 ' + N + ' 之間。');
+      break;
+    }
+    cons.push([r.a - 1, r.b - 1]);
+  }
+  if (msgs.length){
+    err.textContent = msgs.join(' ') + ' 請調整各組人數，或按「自動平均分配」。';
+    err.classList.add('show');
+    return;
+  }
+  err.classList.remove('show');
+  const mAll = people.map((p, i) => i).filter(i => people[i].g === 'm');
+  const fAll = people.map((p, i) => i).filter(i => people[i].g === 'f');
+  let found = null;
+  for (let t = 0; t < 5000 && !found; t++){
+    const ms = shuffle(mAll), fs = shuffle(fAll);
+    let mi = 0, fi = 0;
+    const where = {};
+    const res = groups.map((g, gi) => {
+      const mem = ms.slice(mi, mi + g.m).concat(fs.slice(fi, fi + g.f));
+      mi += g.m; fi += g.f;
+      mem.forEach(i => { where[i] = gi; });
+      return mem;
+    });
+    if (cons.every(([a, b]) => where[a] !== where[b])) found = res.map(m => shuffle(m));
+  }
+  if (!found){
+    err.textContent = '找不到符合「不能同組」的分法，請放寬限制或調整各組人數。';
+    err.classList.add('show');
+    return;
+  }
+  result = found;
+  renderResult(anim);
+}
+
+let revealGen = 0, revealing = false, revealSkip = null;
+const SFX_B64 = "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";
+const SFX_GAIN = 2.88;
+let sfxBuf = null;
+function ac(){
+  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function loadSfx(){
+  try {
+    const bin = atob(SFX_B64), arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    ac().decodeAudioData(arr.buffer, b => { sfxBuf = b; }, () => {});
+  } catch (e) {}
+}
+function thudSynth(big){
+  const t = actx.currentTime, f = big ? 523 : 659;
+  [[f, 'triangle', big ? .3 : .22], [f * 2, 'sine', .08]].forEach(([fr, ty, vol]) => {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = ty;
+    o.frequency.setValueAtTime(fr * 1.08, t);
+    o.frequency.exponentialRampToValueAtTime(fr, t + .06);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + .4);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + .45);
+  });
+}
+function thud(big){
+  if (!sound) return;
+  try {
+    ac();
+    if (!sfxBuf){ thudSynth(big); return; }
+    const src = actx.createBufferSource(), g = actx.createGain();
+    src.buffer = sfxBuf;
+    src.playbackRate.value = big ? .8 : 1;
+    g.gain.value = SFX_GAIN * (big ? 1 : .85);
+    src.connect(g); g.connect(actx.destination);
+    src.start();
+  } catch (e) {}
+}
+function renderResult(anim){
+  const box = $('#results');
+  box.textContent = '';
+  const my = ++revealGen;
+  revealing = false; revealSkip = null;
+  const pre = anim && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const steps = [];
+  result.forEach((mem, gi) => {
+    const card = document.createElement('div');
+    card.className = 'gcard' + (pre ? ' pre' : '');
+    const h = document.createElement('h3');
+    const nm = mem.filter(i => people[i].g === 'm').length;
+    h.textContent = '第' + (gi + 1) + '組';
+    const sm = document.createElement('small');
+    sm.textContent = mem.length + ' 人（男 ' + nm + '，女 ' + (mem.length - nm) + '）';
+    h.append(sm);
+    const ul = document.createElement('ul');
+    steps.push({el: card, big: true});
+    mem.forEach(i => {
+      const li = document.createElement('li');
+      li.className = people[i].g + (pre ? ' pre' : '');
+      li.textContent = nameOf(i);
+      ul.append(li);
+      steps.push({el: li});
+    });
+    card.append(h, ul);
+    box.append(card);
+  });
+  $('#empty').hidden = true;
+  $('#again').hidden = false;
+  $('#copy').hidden = false;
+  if (!pre) return;
+  const gap = Math.min(800, 20000 / steps.length);
+  let n = 0;
+  revealing = true;
+  revealSkip = () => { revealGen++; steps.forEach(st => st.el.classList.remove('pre')); revealing = false; };
+  const next = () => {
+    if (my !== revealGen) return;
+    if (n >= steps.length){ revealing = false; return; }
+    const st = steps[n++];
+    st.el.classList.remove('pre'); st.el.classList.add('pop');
+    thud(!!st.big);
+    setTimeout(next, st.big ? gap * 1.6 : gap);
+  };
+  next();
+}
+
+function copyResult(){
+  if (!result) return;
+  const text = result.map((mem, gi) => '第' + (gi + 1) + '組：' + mem.map(nameOf).join('、')).join('\n');
+  const done = () => { const b = $('#copy'); b.textContent = '已複製'; setTimeout(() => b.textContent = '複製結果', 1500); };
+  const fallback = () => {
+    const t = document.createElement('textarea');
+    t.value = text; document.body.append(t); t.select();
+    try { document.execCommand('copy'); done(); } catch (e) {}
+    t.remove();
+  };
+  try {
+    navigator.clipboard.writeText(text).then(done, fallback);
+  } catch (e) { fallback(); }
+}
+
+const KEY = 'grouping-tool-v1';
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify({people, groups, rules, custom})); } catch (e) {}
+}
+function load(){
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (!d || !Array.isArray(d.people) || !d.people.length || !Array.isArray(d.groups) || !d.groups.length) return false;
+    people = d.people.slice(0, 200).map((p, i) => ({name: String(p && p.name != null ? p.name : defName(i)), g: p && p.g === 'f' ? 'f' : 'm'}));
+    groups = d.groups.slice(0, 30).map(g => ({size: clampInt(g && g.size, 0, 999), m: clampInt(g && g.m, 0, 999), f: clampInt(g && g.f, 0, 999)}));
+    rules = Array.isArray(d.rules) ? d.rules.map(r => ({a: r && Number.isInteger(r.a) ? r.a : null, b: r && Number.isInteger(r.b) ? r.b : null})) : [];
+    custom = !!d.custom;
+    return true;
+  } catch (e) { return false; }
+}
+function afterGender(){
+  if (!custom){ autoFill(); renderGroups(); } else updateStatus();
+  save();
+}
+function removePerson(i){
+  if (people.length <= 1) return;
+  const n = i + 1;
+  people.splice(i, 1);
+  rules = rules.filter(r => r.a !== n && r.b !== n)
+    .map(r => ({a: r.a > n ? r.a - 1 : r.a, b: r.b > n ? r.b - 1 : r.b}));
+  $('#nPeople').value = people.length;
+  resetDrawn();
+  autoFill(); renderPeople(); renderGroups(); renderRules(); save();
+}
+function setRange(g){
+  const n = people.length, f = $('#rFrom').value, t = $('#rTo').value;
+  if (f === '') return;
+  let a = clampInt(f, 1, n), b = t === '' ? a : clampInt(t, 1, n);
+  if (a > b) [a, b] = [b, a];
+  for (let i = a - 1; i < b; i++) people[i].g = g;
+  renderPeople(); afterGender();
+}
+function renderRules(){
+  const box = $('#rules');
+  box.textContent = '';
+  const sp = t => { const s = document.createElement('span'); s.textContent = t; return s; };
+  if (!rules.length){
+    const p = document.createElement('p');
+    p.className = 'empty'; p.style.margin = '0 0 4px';
+    p.textContent = '尚未設定。按下方的「＋」，指定哪兩個號碼不能分在同一組。';
+    box.append(p);
+  }
+  rules.forEach((r, i) => {
+    const row = document.createElement('div');
+    row.className = 'rule';
+    const mk = k => {
+      const inp = document.createElement('input');
+      inp.type = 'number'; inp.min = 1; inp.inputMode = 'numeric';
+      inp.value = r[k] == null ? '' : r[k];
+      inp.dataset.i = i; inp.dataset.k = k;
+      inp.setAttribute('aria-label', '第' + (k === 'a' ? '一' : '二') + '個號碼');
+      return inp;
+    };
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'del'; del.textContent = '✕';
+    del.dataset.rdel = i;
+    del.setAttribute('aria-label', '刪除這條限制');
+    row.append(sp('第'), mk('a'), sp('號和第'), mk('b'), sp('號不能同組'), del);
+    box.append(row);
+  });
+}
+
+/* events */
+$('#nPeople').addEventListener('input', e => {
+  if (e.target.value === '') return;
+  setPeople(clampInt(e.target.value, 1, 200));
+  resetDrawn();
+  autoFill(); renderPeople(); renderGroups(); save();
+});
+$('#nPeople').addEventListener('change', e => { e.target.value = people.length; });
+
+$('#nGroups').addEventListener('input', e => {
+  if (e.target.value === '') return;
+  setGroups(clampInt(e.target.value, 1, 30));
+  autoFill(); renderGroups(); save();
+});
+$('#nGroups').addEventListener('change', e => { e.target.value = groups.length; });
+
+$('#people').addEventListener('input', e => {
+  if (e.target.matches('input[type=text]')){ people[e.target.dataset.i].name = e.target.value; save(); }
+});
+$('#people').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.del !== undefined){ removePerson(+b.dataset.del); return; }
+  people[b.dataset.i].g = b.dataset.g;
+  const seg = b.parentElement;
+  seg.querySelectorAll('button').forEach(x => {
+    const on = x.dataset.g === b.dataset.g;
+    x.className = x.dataset.g + (on ? ' on' : '');
+    x.setAttribute('aria-pressed', on);
+  });
+  updatePCount(); afterGender();
+});
+
+$('#groups').addEventListener('input', e => {
+  const t = e.target;
+  if (!t.dataset.k) return;
+  const g = groups[+t.dataset.i], k = t.dataset.k;
+  const v = clampInt(t.value, 0, 999);
+  if (k === 'size'){ g.size = v; g.m = Math.min(g.m, v); g.f = v - g.m; }
+  else { g[k] = v; g.size = g.m + g.f; }
+  const row = t.closest('.grow');
+  ['size', 'm', 'f'].forEach(x => {
+    if (x !== k) row.querySelector('[data-k="' + x + '"]').value = g[x];
+  });
+  custom = true;
+  updateStatus(); save();
+});
+
+$('#groups').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.dataset.gdel === undefined || groups.length <= 1) return;
+  groups.splice(+b.dataset.gdel, 1);
+  $('#nGroups').value = groups.length;
+  autoFill(); renderGroups(); save();
+});
+$('#auto').addEventListener('click', () => { autoFill(); renderGroups(); $('#err').classList.remove('show'); save(); });
+$('#go').addEventListener('click', () => generate(true));
+$('#showNow').addEventListener('click', () => { if (revealing && revealSkip) revealSkip(); else generate(false); });
+$('#again').addEventListener('click', () => generate(true));
+$('#copy').addEventListener('click', copyResult);
+
+
+$('#rM').addEventListener('click', () => setRange('m'));
+$('#rF').addEventListener('click', () => setRange('f'));
+
+$('#rules').addEventListener('input', e => {
+  const t = e.target;
+  if (!t.dataset.k) return;
+  rules[+t.dataset.i][t.dataset.k] = t.value === '' ? null : clampInt(t.value, 1, 999);
+  save();
+});
+$('#rules').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.dataset.rdel === undefined) return;
+  rules.splice(+b.dataset.rdel, 1);
+  renderRules(); save();
+});
+$('#addRule').addEventListener('click', () => {
+  rules.push({a: null, b: null});
+  renderRules(); save();
+  const ins = $('#rules').querySelectorAll('input');
+  if (ins.length) ins[ins.length - 2].focus();
+});
+
+$('#reset').addEventListener('click', e => {
+  const b = e.currentTarget;
+  if (!b.dataset.armed){
+    b.dataset.armed = '1'; b.textContent = '再按一次確認重設';
+    setTimeout(() => { delete b.dataset.armed; b.textContent = '重設全部'; }, 3000);
+    return;
+  }
+  delete b.dataset.armed; b.textContent = '重設全部';
+  people = []; groups = []; rules = []; result = null;
+  setPeople(12); setGroups(3); autoFill();
+  $('#nPeople').value = 12; $('#nGroups').value = 3;
+  $('#results').textContent = ''; $('#empty').hidden = false;
+  $('#again').hidden = true; $('#copy').hidden = true;
+  $('#err').classList.remove('show');
+  renderPeople(); renderGroups(); renderRules(); save();
+});
+
+/* lottery */
+let drawn = [], hist = [], busy = false;
+function resetDrawn(){
+  drawn = []; hist = []; gen++; busy = false;
+  document.body.classList.remove('spinning');
+  if ($('#cd')) $('#cd').textContent = '';
+  if ($('#dGo')) $('#dGo').disabled = false;
+  if ($('#dResult')){ $('#dResult').textContent = ''; $('#dTitle').textContent = ''; renderHist(); updateRemain(); }
+}
+function poolList(){
+  const f = $('#dGender').value;
+  let pool = people.map((p, i) => i).filter(i => f === 'all' || people[i].g === f);
+  if ($('#dNoRepeat').checked) pool = pool.filter(i => !drawn.includes(i));
+  return pool;
+}
+function updateRemain(){ $('#dRemain').textContent = '目前可抽：' + poolList().length + ' 人'; }
+function renderHist(){
+  const box = $('#dHist');
+  box.textContent = '';
+  if (!hist.length){
+    const p = document.createElement('p');
+    p.className = 'empty'; p.textContent = '還沒有抽過。';
+    box.append(p); return;
+  }
+  hist.slice().reverse().forEach(h => {
+    const r = document.createElement('div');
+    r.className = 'drow';
+    r.textContent = '第' + h.n + '次：' + h.list.map(nameOf).join('、');
+    box.append(r);
+  });
+}
+const EMOJI = ['🎉','⭐','🍀','🎯','🌟','🎁','🦄','🚀'];
+const CUPS = ['🧋','🥤'];
+let sound = true, actx = null, gen = 0, parts = [], fxOn = false;
+const fx = $('#fx'), fctx = fx.getContext('2d');
+function fxSize(){ fx.width = innerWidth; fx.height = innerHeight; }
+fxSize(); addEventListener('resize', fxSize);
+function beep(f, d, type, vol){
+  if (!sound) return;
+  try {
+    ac();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = type || 'square'; o.frequency.value = f;
+    g.gain.setValueAtTime(vol || .04, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + d);
+  } catch (e) {}
+}
+let sparks = [], rockets = [], rings = [];
+function fxStart(){ if (!fxOn){ fxOn = true; requestAnimationFrame(fxFrame); } }
+function burst(x, y, n){
+  const cols = ['#ffd166', '#ff8ec8', '#7cc4ff', '#8ff0b8', '#ffffff'];
+  for (let i = 0; i < n; i++){
+    const a = Math.random() * 6.283, v = Math.random() * 7 + 3;
+    parts.push({x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 4, r: Math.random() * 4 + 3, c: cols[i % 5], rot: Math.random() * 6, vr: (Math.random() - .5) * .4, life: 80 + Math.random() * 40});
+  }
+  fxStart();
+}
+function explode(x, y, n){
+  const hue = Math.random() * 360, two = Math.random() < .5;
+  for (let i = 0; i < n; i++){
+    const alt = two && i % 2, a = Math.random() * 6.283, v = (Math.random() * .6 + .4) * (alt ? 4 : 8);
+    sparks.push({x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 60 + Math.random() * 30, max: 90, c: 'hsl(' + ((hue + (alt ? 150 : 0) + Math.random() * 30) % 360) + ',100%,65%)', r: Math.random() * 2 + 1.5});
+  }
+  rings.push({x, y, r: 6, life: 30});
+  fxStart();
+}
+function rocket(tx, ty, delay){
+  setTimeout(() => {
+    rockets.push({x: tx + (Math.random() - .5) * 120, y: innerHeight, ty, vy: -(14 + Math.random() * 4)});
+    fxStart();
+  }, delay || 0);
+}
+function fxFrame(){
+  fctx.globalCompositeOperation = 'destination-out';
+  fctx.fillStyle = 'rgba(0,0,0,.28)';
+  fctx.fillRect(0, 0, fx.width, fx.height);
+  fctx.globalCompositeOperation = 'lighter';
+  rockets = rockets.filter(r => {
+    r.y += r.vy; r.vy *= .985;
+    sparks.push({x: r.x, y: r.y, vx: (Math.random() - .5) * .8, vy: 1 + Math.random(), life: 18, max: 18, c: '#ffd9a0', r: 1.8});
+    if (r.y <= r.ty || r.vy > -3){ explode(r.x, r.y, 70); return false; }
+    return true;
+  });
+  sparks = sparks.filter(p => p.life-- > 0);
+  for (const p of sparks){
+    p.x += p.vx; p.y += p.vy; p.vy += .12; p.vx *= .985; p.vy *= .985;
+    fctx.globalAlpha = Math.max(0, p.life / p.max);
+    fctx.fillStyle = p.c; fctx.beginPath(); fctx.arc(p.x, p.y, p.r, 0, 6.283); fctx.fill();
+  }
+  rings = rings.filter(r => r.life-- > 0);
+  for (const r of rings){
+    r.r += 9; fctx.globalAlpha = r.life / 30; fctx.strokeStyle = '#ffe9b0'; fctx.lineWidth = 3;
+    fctx.beginPath(); fctx.arc(r.x, r.y, r.r, 0, 6.283); fctx.stroke();
+  }
+  parts = parts.filter(p => p.life-- > 0);
+  for (const p of parts){
+    p.x += p.vx; p.y += p.vy; p.vy += .25; p.vx *= .99; p.rot += p.vr;
+    fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.rot);
+    fctx.globalAlpha = Math.min(1, p.life / 30); fctx.fillStyle = p.c;
+    fctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); fctx.restore();
+  }
+  fctx.globalAlpha = 1;
+  if (sparks.length || rockets.length || rings.length || parts.length) requestAnimationFrame(fxFrame);
+  else { fxOn = false; fctx.globalCompositeOperation = 'source-over'; fctx.clearRect(0, 0, fx.width, fx.height); }
+}
+function commit(picks, calm){
+  drawn.push(...picks); hist.push({n: hist.length + 1, list: picks});
+  $('#dTitle').textContent = '🎉 恭喜幸運兒！';
+  document.body.classList.remove('spinning');
+  renderHist(); updateRemain();
+  if (!calm) finale();
+  [784, 988, 1175].forEach((f, n) => setTimeout(() => beep(f, .25, 'triangle', .08), n * 120));
+  busy = false; $('#dGo').disabled = false;
+}
+function chipFor(i, j){
+  const c = document.createElement('span');
+  c.className = 'dchip fin ' + people[i].g;
+  c.dataset.e = EMOJI[j % EMOJI.length];
+  c.textContent = nameOf(i);
+  return c;
+}
+function fxAt(el, k, calm){
+  if (calm || k > 12) return;
+  const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+  explode(x, y, 45); burst(x, y, 16);
+}
+function altDraw(style, picks, pool, k){
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const box = $('#dResult'), my = gen, TAU = 6.283185;
+  box.textContent = '';
+  busy = true; $('#dGo').disabled = true;
+  const later = (fn, ms) => setTimeout(() => { if (my === gen) fn(); }, ms);
+  const gap = calm ? 0 : Math.min(500, 2500 / k);
+  document.body.classList.add('spinning');
+  if (style === 'flip' || style === 'egg'){
+    $('#dTitle').textContent = style === 'flip' ? '🃏 洗牌中…' : '🧋 來杯好茶搖一搖…';
+    const els = picks.map((_, j) => {
+      const el = document.createElement('div');
+      if (style === 'flip'){
+        el.className = 'fcard shuf';
+        el.innerHTML = '<div class="fi"><div class="face back">❓</div><div class="face front"></div></div>';
+      } else { el.className = 'egg'; el.textContent = CUPS[j % CUPS.length]; }
+      box.append(el); return el;
+    });
+    els.forEach((el, j) => later(() => {
+      const i = picks[j];
+      let target = el;
+      if (style === 'flip'){
+        el.classList.remove('shuf');
+        const fr = el.querySelector('.front');
+        fr.className = 'face front ' + people[i].g; fr.textContent = nameOf(i);
+        el.classList.add('on');
+      } else {
+        target = chipFor(i, j); target.dataset.e = CUPS[j % CUPS.length]; el.replaceWith(target);
+      }
+      beep(520 + (j % 8) * 70, .18, 'triangle', .07);
+      fxAt(target, k, calm);
+      if (j === k - 1) later(() => commit(picks, calm), calm ? 0 : 700);
+    }, (calm ? 0 : 1300) + j * gap));
+    return;
+  }
+  $('#dTitle').textContent = '🎡 轉啊轉…';
+  const wrap = document.createElement('div'); wrap.className = 'wheelwrap';
+  const cv = document.createElement('canvas'); cv.width = cv.height = 320; cv.className = 'wheel';
+  const ptr = document.createElement('div'); ptr.className = 'wptr'; ptr.textContent = '▼';
+  const out = document.createElement('div'); out.className = 'wout';
+  wrap.append(ptr, cv); box.append(wrap, out);
+  if (calm){
+    picks.forEach((i, j) => out.append(chipFor(i, j)));
+    commit(picks, true); return;
+  }
+  const cols = ['#ff8ec8', '#7cc4ff', '#ffd166', '#8ff0b8', '#c3a6ff', '#ff9a62'];
+  let left = pool.slice(), rot = 0, round = 0;
+  const paint = () => {
+    const g = cv.getContext('2d'), n = left.length, a = TAU / n;
+    g.clearRect(0, 0, 320, 320);
+    left.forEach((idx, q) => {
+      g.beginPath(); g.moveTo(160, 160);
+      g.arc(160, 160, 156, -Math.PI / 2 + q * a - a / 2, -Math.PI / 2 + q * a + a / 2);
+      g.closePath(); g.fillStyle = cols[q % cols.length]; g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 1; g.stroke();
+      if (n <= 30){
+        g.save(); g.translate(160, 160); g.rotate(-Math.PI / 2 + q * a);
+        g.fillStyle = '#1a1030'; g.font = '700 ' + (n > 14 ? 11 : 15) + 'px sans-serif';
+        g.textAlign = 'right'; g.textBaseline = 'middle';
+        g.fillText(nameOf(idx), 144, 0); g.restore();
+      }
+    });
+  };
+  const spin = () => {
+    const q = left.indexOf(picks[round]), a = TAU / left.length;
+    const dur = k <= 3 ? 4000 : 2600;
+    const delta = ((TAU - q * a) - (rot % TAU) + TAU) % TAU;
+    const target = rot + TAU * 4 + delta + (Math.random() - .5) * a * .6;
+    cv.style.transition = 'transform ' + dur + 'ms cubic-bezier(.12,.7,.1,1)';
+    cv.style.transform = 'rotate(' + target + 'rad)';
+    rot = target;
+    for (let t = 0; t < 22; t++) later(() => beep(300 + t * 10, .03, 'square', .02), dur * Math.pow(t / 22, 1.8));
+    later(() => {
+      const c = chipFor(picks[round], round);
+      out.append(c);
+      beep(660, .2, 'triangle', .08);
+      fxAt(c, k, false);
+      round++;
+      if (round >= k){ later(() => commit(picks, false), 500); return; }
+      left.splice(q, 1);
+      later(() => {
+        cv.style.transition = 'none'; rot = 0; cv.style.transform = 'rotate(0rad)'; paint();
+        later(spin, 80);
+      }, 700);
+    }, dur + 150);
+  };
+  paint();
+  later(spin, 400);
+}
+function countdown(my, cb){
+  const cd = $('#cd');
+  let n = 3;
+  (function step(){
+    if (my !== gen){ cd.textContent = ''; return; }
+    if (n === 0){ cd.textContent = ''; cb(); return; }
+    cd.textContent = n; cd.classList.remove('tick'); void cd.offsetWidth; cd.classList.add('tick');
+    beep(n === 1 ? 880 : 660, .15, 'square', .05);
+    n--; setTimeout(step, 700);
+  })();
+}
+function finale(){
+  const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go');
+  const c = $('#drawCard'); c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake');
+  for (let i = 0; i < 7; i++) rocket(innerWidth * (.12 + .76 * i / 6), innerHeight * (.15 + Math.random() * .3), 150 + i * 160);
+  burst(innerWidth * .5, innerHeight * .3, 90);
+}
+function doDraw(){
+  if (busy) return;
+  const msg = $('#dMsg');
+  msg.classList.remove('show');
+  const want = clampInt($('#dCount').value, 1, 200);
+  const pool = poolList();
+  if (!pool.length){
+    msg.textContent = '沒有可以抽的人了。可以按「重設已抽」，或取消「已抽過的不再抽」。';
+    msg.classList.add('show'); return;
+  }
+  const k = Math.min(want, pool.length);
+  if (k < want){ msg.textContent = '只剩 ' + k + ' 人可抽，已全部抽出。'; msg.classList.add('show'); }
+  const picks = shuffle(pool).slice(0, k);
+  let style = $('#dStyle').value;
+  if (style === 'wheel' && k > 8){
+    style = 'slot';
+    msg.textContent = '轉盤一次最多抽 8 人，這次改用老虎機。'; msg.classList.add('show');
+  }
+  $('#drawCard').classList.toggle('wheelmode', style === 'wheel');
+  if (style !== 'slot'){ altDraw(style, picks, pool, k); return; }
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const box = $('#dResult'), btn = $('#dGo'), my = gen;
+  box.textContent = '';
+  $('#dTitle').textContent = '🎰 準備好了嗎？';
+  const reels = picks.map(() => {
+    const el = document.createElement('span');
+    el.className = 'dchip roll'; el.textContent = '？';
+    box.append(el); return el;
+  });
+  busy = true; btn.disabled = true;
+  const gap = calm ? 0 : Math.min(450, 2500 / k), base = calm ? 0 : 900;
+  let stopped = 0;
+  const land = (el, i, j) => {
+    el.className = 'dchip fin ' + people[i].g;
+    el.dataset.e = EMOJI[j % EMOJI.length];
+    el.textContent = nameOf(i);
+    beep(520 + (j % 8) * 70, .18, 'triangle', .07);
+    if (!calm && k <= 12){
+      const r = el.getBoundingClientRect();
+      explode(r.left + r.width / 2, r.top + r.height / 2, 45);
+      burst(r.left + r.width / 2, r.top + r.height / 2, 16);
+    }
+    if (++stopped < k) return;
+    drawn.push(...picks); hist.push({n: hist.length + 1, list: picks});
+    $('#dTitle').textContent = '🎉 恭喜幸運兒！';
+    document.body.classList.remove('spinning');
+    renderHist(); updateRemain();
+    if (!calm) finale();
+    [784, 988, 1175].forEach((f, n) => setTimeout(() => beep(f, .25, 'triangle', .08), n * 120));
+    busy = false; btn.disabled = false;
+  };
+  const run = () => {
+    if (my !== gen) return;
+    $('#dTitle').textContent = '🎰 抽籤中…';
+    document.body.classList.add('spinning');
+    reels.forEach((el, j) => {
+      const stopAt = base + j * gap, t0 = performance.now();
+      (function spin(){
+        if (my !== gen) return;
+        const el_t = performance.now() - t0;
+        if (el_t >= stopAt){ land(el, picks[j], j); return; }
+        el.textContent = nameOf(pool[Math.floor(Math.random() * pool.length)]);
+        if (j === 0) beep(450 + Math.random() * 450, .03, 'square', .015);
+        setTimeout(spin, 50 + 150 * Math.pow(el_t / Math.max(stopAt, 1), 2));
+      })();
+    });
+  };
+  if (calm) run(); else countdown(my, run);
+}
+function setMode(m){
+  $('#gCard').hidden = $('#rCard').hidden = m !== 'group';
+  $('#drawCard').hidden = m !== 'draw';
+  $('.layout').classList.toggle('draw', m === 'draw');
+  $('#tGroup').setAttribute('aria-selected', m === 'group');
+  $('#tDraw').setAttribute('aria-selected', m === 'draw');
+  $('#subtitle').textContent = m === 'group'
+    ? '設定名單與性別，決定每組人數與男女人數，按下按鈕就會隨機分組。'
+    : '設定一次要抽出的人數，按下抽籤，就會從名單中隨機抽出。';
+  if (m === 'draw') updateRemain();
+  try { localStorage.setItem('grouping-tool-mode', m); } catch (e) {}
+}
+$('#tGroup').addEventListener('click', () => setMode('group'));
+$('#tDraw').addEventListener('click', () => setMode('draw'));
+$('#dGo').addEventListener('click', doDraw);
+$('#dStyle').addEventListener('change', e => $('#drawCard').classList.toggle('wheelmode', e.target.value === 'wheel'));
+const setSound = v => {
+  sound = v;
+  ['#dSound', '#gSound'].forEach(id => {
+    const b = $(id);
+    b.textContent = v ? '🔊 音效' : '🔇 靜音';
+    b.setAttribute('aria-pressed', v);
+  });
+};
+$('#dSound').addEventListener('click', () => setSound(!sound));
+$('#gSound').addEventListener('click', () => setSound(!sound));
+$('#dReset').addEventListener('click', () => { resetDrawn(); $('#dMsg').classList.remove('show'); });
+$('#dGender').addEventListener('change', updateRemain);
+$('#dNoRepeat').addEventListener('change', updateRemain);
+
+(function(){
+  const c = $('#stars'), x = c.getContext('2d');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w, h, d, stars = [], sh = null;
+  function size(){
+    d = window.devicePixelRatio || 1;
+    w = c.width = Math.round(innerWidth * d); h = c.height = Math.round(innerHeight * d);
+    c.style.width = innerWidth + 'px'; c.style.height = innerHeight + 'px';
+    const n = Math.min(320, Math.round(innerWidth * innerHeight / 5000));
+    stars = Array.from({length: n}, () => ({x: Math.random() * w, y: Math.random() * h, r: (Math.random() * 1.1 + .3) * d, p: Math.random() * 6.3, s: Math.random() * .025 + .005, c: Math.random() < .2 ? '#ffe9b0' : (Math.random() < .25 ? '#bcd8ff' : '#fff')}));
+  }
+  function frame(){
+    x.clearRect(0, 0, w, h);
+    for (const s of stars){
+      if (!still) s.p += s.s;
+      x.globalAlpha = .3 + .7 * Math.abs(Math.sin(s.p));
+      x.fillStyle = s.c; x.beginPath(); x.arc(s.x, s.y, s.r, 0, 6.283); x.fill();
+    }
+    if (still) return;
+    if (!sh && Math.random() < .004) sh = {x: Math.random() * w * .7, y: Math.random() * h * .35, t: 0};
+    if (sh){
+      const len = 140 * d, px = sh.x + sh.t * 10 * d, py = sh.y + sh.t * 5 * d;
+      const g = x.createLinearGradient(px, py, px - len, py - len / 2);
+      g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.globalAlpha = 1; x.strokeStyle = g; x.lineWidth = 1.5 * d;
+      x.beginPath(); x.moveTo(px, py); x.lineTo(px - len, py - len / 2); x.stroke();
+      if (++sh.t > 60) sh = null;
+    }
+    requestAnimationFrame(frame);
+  }
+  size(); frame();
+  addEventListener('resize', () => { size(); if (still) frame(); });
+})();
+
+loadSfx();
+/* init */
+if (load()){
+  $('#nPeople').value = people.length;
+  $('#nGroups').value = groups.length;
+} else {
+  setPeople(12); setGroups(3); autoFill();
+}
+renderPeople(); renderGroups(); renderRules(); renderHist();
+let mode = 'group';
+try { mode = localStorage.getItem('grouping-tool-mode') === 'draw' ? 'draw' : 'group'; } catch (e) {}
+setMode(mode);
+</script>
+</body>
+</html>
